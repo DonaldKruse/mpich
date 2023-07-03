@@ -129,9 +129,66 @@ typedef struct {
 } MPIU_exp_data_tls_t;
 extern __thread MPIU_exp_data_tls_t l_MPIU_exp_data;
 
-#endif /* defined(VCIEXP_LOCK_PTHREADS) || defined(VCIEXP_LOCK_ARGOBOTS) */
+#undef VCIEXP_LOCK_PTHREADS_COND_OR_FALSE
+#if defined(VCIEXP_LOCK_PTHREADS)
+#define VCIEXP_LOCK_PTHREADS_COND_OR_FALSE(cond) (cond)
+#else
+#define VCIEXP_LOCK_PTHREADS_COND_OR_FALSE(...) 0
+#endif
 
+static inline
+void MPIDUI_Thread_cs_enter_vci_impl(MPIDU_Thread_mutex_t *p_mutex, int mutex_id,
+                                     bool recursive, const char *mutex_str, const char *function,
+                                     const char *file, int line)
+{
+    if (mutex_id <= 0 || VCIEXP_LOCK_PTHREADS_COND_OR_FALSE(!g_MPIU_exp_data.no_lock)) {
+        if (recursive) {
+            MPIDUI_THREAD_CS_ENTER_REC((*p_mutex));
+        } else {
+            MPIDUI_THREAD_CS_ENTER((*p_mutex));
+        }
+    }
+}
 
+static inline
+void MPIDUI_Thread_cs_exit_vci_impl(MPIDU_Thread_mutex_t *p_mutex, int mutex_id,
+                                    const char *mutex_str, const char *function, const char *file,
+                                    int line)
+{
+    if (mutex_id <= 0 || VCIEXP_LOCK_PTHREADS_COND_OR_FALSE(!g_MPIU_exp_data.no_lock)) {
+        MPIDUI_THREAD_CS_EXIT((*p_mutex));
+    }
+}
+
+static inline
+void MPIDUI_Thread_cs_yield_vci_impl(MPIDU_Thread_mutex_t *p_mutex, int mutex_id,
+                                     const char *mutex_str, const char *function, const char *file,
+                                     int line)
+{
+    if (mutex_id <= 0 || VCIEXP_LOCK_PTHREADS_COND_OR_FALSE(!g_MPIU_exp_data.no_lock)) {
+        MPIDUI_THREAD_CS_YIELD((*p_mutex));
+    }
+}
+
+#define MPIDUI_THREAD_CS_ENTER_VCI(_mutex, _mutex_id) \
+    MPIDUI_Thread_cs_enter_vci_impl(&(_mutex), _mutex_id, false, #_mutex, __FUNCTION__, __FILE__, __LINE__) 
+#define MPIDUI_THREAD_CS_ENTER_REC_VCI(_mutex, _mutex_id)               \
+    MPIDUI_Thread_cs_enter_vci_impl(&(_mutex), _mutex_id, true, #_mutex, __FUNCTION__, __FILE__, __LINE__) 
+#define MPIDUI_THREAD_CS_EXIT_VCI(_mutex, _mutex_id)                    \
+    MPIDUI_Thread_cs_exit_vci_impl(&(_mutex), _mutex_id, #_mutex, __FUNCTION__, __FILE__, __LINE__) 
+#define MPIDUI_THREAD_CS_YIELD_VCI(_mutex, _mutex_id)                   \
+    MPIDUI_Thread_cs_yield_vci_impl(&(_mutex), _mutex_id, #_mutex, __FUNCTION__, __FILE__, __LINE__)
+#define MPIDUI_THREAD_ASSERT_IN_CS_VCI(_mutex, _mutex_id) do {} while (0) /* no-op */ \
+        
+#else /* !(defined(VCIEXP_LOCK_PTHREADS) || defined(VCIEXP_LOCK_ARGOBOTS)) */
+
+#define MPIDUI_THREAD_CS_ENTER_VCI(mutex, mutex_id) MPIDUI_THREAD_CS_ENTER(mutex)
+#define MPIDUI_THREAD_CS_ENTER_REC_VCI(mutex, mutex_id) MPIDUI_THREAD_CS_ENTER_REC(mutex)
+#define MPIDUI_THREAD_CS_EXIT_VCI(mutex, mutex_id) MPIDUI_THREAD_CS_EXIT(mutex)
+#define MPIDUI_THREAD_CS_YIELD_VCI(mutex, mutex_id) MPIDUI_THREAD_CS_YIELD(mutex)
+#define MPIDUI_THREAD_ASSERT_IN_CS_VCI(mutex, mutex_id) MPIDUI_THREAD_ASSERT_IN_CS(mutex)
+
+#endif /* !(defined(VCIEXP_LOCK_PTHREADS) || defined(VCIEXP_LOCK_ARGOBOTS)) */
 
 #endif /* MPICH_THREAD_GRANULARITY */
 #endif /* MPICH_IS_THREADED */

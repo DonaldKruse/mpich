@@ -27,7 +27,8 @@ typedef MPIDU_Thread_mutex_t MPID_Thread_mutex_t;
  */
 
 #if MPICH_THREAD_GRANULARITY == MPICH_THREAD_GRANULARITY__VCI
-#define MPID_THREAD_CS_ENTER_REC_VCI(mutex)   MPIDUI_THREAD_CS_ENTER_REC(mutex)
+//#define MPID_THREAD_CS_ENTER_REC_VCI(mutex)   MPIDUI_THREAD_CS_ENTER_REC(mutex)
+#define MPID_THREAD_CS_ENTER_REC_VCI(mutex)   MPIDUI_THREAD_CS_ENTER_REC_VCI(mutex, mutex_id)
 #else
 #define MPID_THREAD_CS_ENTER_REC_VCI(mutex)     /* NOOP */
 #endif
