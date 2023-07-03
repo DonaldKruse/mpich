@@ -316,12 +316,14 @@ int MPIR_Comm_split_impl(MPIR_Comm * comm_ptr, int color, int key, MPIR_Comm ** 
         }
 
         /* Inherit the error handler (if any) */
-        MPID_THREAD_CS_ENTER(VCI, comm_ptr->mutex);
+        //MPID_THREAD_CS_ENTER(VCI, comm_ptr->mutex);
+        MPID_THREAD_CS_ENTER(VCI, comm_ptr->mutex, MPIR_THREAD_VCI_CTX_MUTEX_ID);
         (*newcomm_ptr)->errhandler = comm_ptr->errhandler;
         if (comm_ptr->errhandler) {
             MPIR_Errhandler_add_ref(comm_ptr->errhandler);
         }
-        MPID_THREAD_CS_EXIT(VCI, comm_ptr->mutex);
+            //MPID_THREAD_CS_EXIT(VCI, comm_ptr->mutex);
+        MPID_THREAD_CS_EXIT(VCI, comm_ptr->mutex, MPIR_THREAD_VCI_CTX_MUTEX_ID);
 
         (*newcomm_ptr)->tainted = comm_ptr->tainted;
         mpi_errno = MPIR_Comm_commit(*newcomm_ptr);

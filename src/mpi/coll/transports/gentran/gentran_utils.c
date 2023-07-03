@@ -337,7 +337,7 @@ int MPII_Genutil_progress_hook(int *made_progress)
         return MPI_SUCCESS;
     }
 
-    MPID_THREAD_CS_ENTER(VCI, MPIDIU_THREAD_TSP_QUEUE_MUTEX);
+    MPID_THREAD_CS_ENTER(VCI, MPIDIU_THREAD_TSP_QUEUE_MUTEX, MPIDIU_THREAD_TSP_QUEUE_MUTEX_ID);
     in_genutil_progress = 1;
 
     if (made_progress)
@@ -376,7 +376,7 @@ int MPII_Genutil_progress_hook(int *made_progress)
         MPIR_Progress_hook_deactivate(MPII_Genutil_progress_hook_id);
 
     in_genutil_progress = 0;
-    MPID_THREAD_CS_EXIT(VCI, MPIDIU_THREAD_TSP_QUEUE_MUTEX);
+    MPID_THREAD_CS_EXIT(VCI, MPIDIU_THREAD_TSP_QUEUE_MUTEX, MPIDIU_THREAD_TSP_QUEUE_MUTEX_ID);
 
     return mpi_errno;
 }

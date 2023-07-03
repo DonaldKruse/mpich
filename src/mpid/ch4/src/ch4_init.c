@@ -859,9 +859,11 @@ void *MPID_Alloc_mem(MPI_Aint size, MPIR_Info * info_ptr)
     container->buf_type = buf_type;
     container->size = size + alignment;
 
-    MPID_THREAD_CS_ENTER(VCI, MPIDIU_THREAD_ALLOC_MEM_MUTEX);
+        //MPID_THREAD_CS_ENTER(VCI, MPIDIU_THREAD_ALLOC_MEM_MUTEX);
+    MPID_THREAD_CS_ENTER(VCI, MPIDIU_THREAD_ALLOC_MEM_MUTEX, MPIDIU_THREAD_ALLOC_MEM_MUTEX_ID);
     HASH_ADD_PTR(alloc_mem_container_list, user_buf, container, MPL_MEM_USER);
-    MPID_THREAD_CS_EXIT(VCI, MPIDIU_THREAD_ALLOC_MEM_MUTEX);
+        //MPID_THREAD_CS_EXIT(VCI, MPIDIU_THREAD_ALLOC_MEM_MUTEX);
+    MPID_THREAD_CS_EXIT(VCI, MPIDIU_THREAD_ALLOC_MEM_MUTEX, MPIDIU_THREAD_ALLOC_MEM_MUTEX_ID);
 
   fn_exit:
     MPIR_FUNC_EXIT;
@@ -875,11 +877,13 @@ int MPID_Free_mem(void *user_buf)
 
     alloc_mem_container_s *container;
 
-    MPID_THREAD_CS_ENTER(VCI, MPIDIU_THREAD_ALLOC_MEM_MUTEX);
+        //MPID_THREAD_CS_ENTER(VCI, MPIDIU_THREAD_ALLOC_MEM_MUTEX);
+    MPID_THREAD_CS_ENTER(VCI, MPIDIU_THREAD_ALLOC_MEM_MUTEX, MPIDIU_THREAD_ALLOC_MEM_MUTEX_ID);
     HASH_FIND_PTR(alloc_mem_container_list, &user_buf, container);
     assert(container);
     HASH_DEL(alloc_mem_container_list, container);
-    MPID_THREAD_CS_EXIT(VCI, MPIDIU_THREAD_ALLOC_MEM_MUTEX);
+        //MPID_THREAD_CS_EXIT(VCI, MPIDIU_THREAD_ALLOC_MEM_MUTEX);
+    MPID_THREAD_CS_EXIT(VCI, MPIDIU_THREAD_ALLOC_MEM_MUTEX, MPIDIU_THREAD_ALLOC_MEM_MUTEX_ID);
 
     switch (container->buf_type) {
         case ALLOC_MEM_BUF_TYPE__HBM:

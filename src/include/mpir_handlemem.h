@@ -254,9 +254,11 @@ static inline void *MPIR_Handle_obj_alloc(MPIR_Object_alloc_t * objmem)
     MPIR_Assert(objmem->kind != MPIR_INFO);
 
     void *ret;
-    MPID_THREAD_CS_ENTER(VCI, MPIR_THREAD_VCI_HANDLE_MUTEX);
+        //MPID_THREAD_CS_ENTER(VCI, MPIR_THREAD_VCI_HANDLE_MUTEX);
+    MPID_THREAD_CS_ENTER(VCI, MPIR_THREAD_VCI_HANDLE_MUTEX, MPIR_THREAD_VCI_HANDLE_MUTEX_ID);
     ret = MPIR_Handle_obj_alloc_unsafe(objmem, HANDLE_NUM_BLOCKS, HANDLE_NUM_INDICES);
-    MPID_THREAD_CS_EXIT(VCI, MPIR_THREAD_VCI_HANDLE_MUTEX);
+        //MPID_THREAD_CS_EXIT(VCI, MPIR_THREAD_VCI_HANDLE_MUTEX);
+    MPID_THREAD_CS_EXIT(VCI, MPIR_THREAD_VCI_HANDLE_MUTEX, MPIR_THREAD_VCI_HANDLE_MUTEX_ID);
     return ret;
 }
 
@@ -375,9 +377,11 @@ static inline void MPIR_Handle_obj_free(MPIR_Object_alloc_t * objmem, void *obje
     /* MPI_Info must call MPIR_Info_handle_obj_free(). */
     MPIR_Assert(objmem->kind != MPIR_INFO);
 
-    MPID_THREAD_CS_ENTER(VCI, MPIR_THREAD_VCI_HANDLE_MUTEX);
+        //MPID_THREAD_CS_ENTER(VCI, MPIR_THREAD_VCI_HANDLE_MUTEX);
+    MPID_THREAD_CS_ENTER(VCI, MPIR_THREAD_VCI_HANDLE_MUTEX, MPIR_THREAD_VCI_HANDLE_MUTEX_ID);
     MPIR_Handle_obj_free_unsafe(objmem, object, /* not info */ FALSE);
-    MPID_THREAD_CS_EXIT(VCI, MPIR_THREAD_VCI_HANDLE_MUTEX);
+        //MPID_THREAD_CS_EXIT(VCI, MPIR_THREAD_VCI_HANDLE_MUTEX);
+    MPID_THREAD_CS_EXIT(VCI, MPIR_THREAD_VCI_HANDLE_MUTEX, MPIR_THREAD_VCI_HANDLE_MUTEX_ID);
 }
 
 static inline void MPIR_Handle_obj_free_unsafe(MPIR_Object_alloc_t * objmem, void *object,

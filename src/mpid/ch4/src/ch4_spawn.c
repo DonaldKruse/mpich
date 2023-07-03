@@ -56,10 +56,12 @@ int MPID_Comm_spawn_multiple(int count, char *commands[], char **argvs[], const 
             preput_keyval_vector.key = MPIDI_PARENT_PORT_KVSKEY;
             preput_keyval_vector.val = port_name;
 
-            MPID_THREAD_CS_ENTER(VCI, MPIR_THREAD_VCI_PMI_MUTEX);
+                //MPID_THREAD_CS_ENTER(VCI, MPIR_THREAD_VCI_PMI_MUTEX);
+            MPID_THREAD_CS_ENTER(VCI, MPIR_THREAD_VCI_PMI_MUTEX, MPIR_THREAD_VCI_PMI_MUTEX_ID);
             mpi_errno = MPIR_pmi_spawn_multiple(count, commands, argvs, maxprocs, info_ptrs,
                                                 1, &preput_keyval_vector, pmi_errcodes);
-            MPID_THREAD_CS_EXIT(VCI, MPIR_THREAD_VCI_PMI_MUTEX);
+                //MPID_THREAD_CS_EXIT(VCI, MPIR_THREAD_VCI_PMI_MUTEX);
+            MPID_THREAD_CS_EXIT(VCI, MPIR_THREAD_VCI_PMI_MUTEX, MPIR_THREAD_VCI_PMI_MUTEX_ID);
             if (mpi_errno != MPI_SUCCESS) {
                 spawn_error = 1;
             }
@@ -137,14 +139,16 @@ static void free_port_name_tag(int tag)
     int idx, rem_tag;
 
     MPIR_FUNC_ENTER;
-    MPID_THREAD_CS_ENTER(VCI, MPIDIU_THREAD_DYNPROC_MUTEX);
+        //MPID_THREAD_CS_ENTER(VCI, MPIDIU_THREAD_DYNPROC_MUTEX);
+    MPID_THREAD_CS_ENTER(VCI, MPIDIU_THREAD_DYNPROC_MUTEX, MPIDIU_THREAD_DYNPROC_MUTEX_ID);
 
     idx = tag / (sizeof(int) * 8);
     rem_tag = tag - (idx * sizeof(int) * 8);
 
     port_name_tag_mask[idx] &= ~PORT_MASK_BIT(rem_tag);
 
-    MPID_THREAD_CS_EXIT(VCI, MPIDIU_THREAD_DYNPROC_MUTEX);
+        //MPID_THREAD_CS_EXIT(VCI, MPIDIU_THREAD_DYNPROC_MUTEX);
+    MPID_THREAD_CS_EXIT(VCI, MPIDIU_THREAD_DYNPROC_MUTEX, MPIDIU_THREAD_DYNPROC_MUTEX_ID);
     MPIR_FUNC_EXIT;
 }
 
@@ -154,7 +158,8 @@ static int get_port_name_tag(int *port_name_tag)
     int mpi_errno = MPI_SUCCESS;
 
     MPIR_FUNC_ENTER;
-    MPID_THREAD_CS_ENTER(VCI, MPIDIU_THREAD_DYNPROC_MUTEX);
+        //MPID_THREAD_CS_ENTER(VCI, MPIDIU_THREAD_DYNPROC_MUTEX);
+    MPID_THREAD_CS_ENTER(VCI, MPIDIU_THREAD_DYNPROC_MUTEX, MPIDIU_THREAD_DYNPROC_MUTEX_ID);
 
     for (i = 0; i < MPIR_MAX_CONTEXT_MASK; i++)
         if (port_name_tag_mask[i] != ~0)
@@ -173,7 +178,8 @@ static int get_port_name_tag(int *port_name_tag)
     }
 
   fn_exit:
-    MPID_THREAD_CS_EXIT(VCI, MPIDIU_THREAD_DYNPROC_MUTEX);
+        //MPID_THREAD_CS_EXIT(VCI, MPIDIU_THREAD_DYNPROC_MUTEX);
+    MPID_THREAD_CS_EXIT(VCI, MPIDIU_THREAD_DYNPROC_MUTEX, MPIDIU_THREAD_DYNPROC_MUTEX_ID);
     MPIR_FUNC_EXIT;
     return mpi_errno;
 

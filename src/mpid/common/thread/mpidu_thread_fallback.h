@@ -118,16 +118,24 @@ M*/
 M*/
 
 #if defined(MPICH_IS_THREADED)
-#define MPIDU_THREAD_CS_ENTER(name, mutex) MPIDUI_THREAD_CS_ENTER_##name(mutex)
-#define MPIDU_THREAD_CS_EXIT(name, mutex) MPIDUI_THREAD_CS_EXIT_##name(mutex)
-#define MPIDU_THREAD_CS_YIELD(name, mutex) MPIDUI_THREAD_CS_YIELD_##name(mutex)
-#define MPIDU_THREAD_ASSERT_IN_CS(name, mutex) MPIDUI_THREAD_ASSERT_IN_CS_##name(mutex)
+//#define MPIDU_THREAD_CS_ENTER(name, mutex) MPIDUI_THREAD_CS_ENTER_##name(mutex)
+//#define MPIDU_THREAD_CS_EXIT(name, mutex) MPIDUI_THREAD_CS_EXIT_##name(mutex)
+//#define MPIDU_THREAD_CS_YIELD(name, mutex) MPIDUI_THREAD_CS_YIELD_##name(mutex)
+//#define MPIDU_THREAD_ASSERT_IN_CS(name, mutex) MPIDUI_THREAD_ASSERT_IN_CS_##name(mutex)
+#define MPIDU_THREAD_CS_ENTER(name, ...) MPIDUI_THREAD_CS_ENTER_##name(__VA_ARGS__)
+#define MPIDU_THREAD_CS_EXIT(name, ...) MPIDUI_THREAD_CS_EXIT_##name(__VA_ARGS__)
+#define MPIDU_THREAD_CS_YIELD(name, ...) MPIDUI_THREAD_CS_YIELD_##name(__VA_ARGS__)
+#define MPIDU_THREAD_ASSERT_IN_CS(name, ...) MPIDUI_THREAD_ASSERT_IN_CS_##name(__VA_ARGS__)
 
 #else
-#define MPIDU_THREAD_CS_ENTER(name, mutex)      /* NOOP */
-#define MPIDU_THREAD_CS_EXIT(name, mutex)       /* NOOP */
-#define MPIDU_THREAD_CS_YIELD(name, mutex)      /* NOOP */
-#define MPIDU_THREAD_ASSERT_IN_CS(name, mutex)  /* NOOP */
+//#define MPIDU_THREAD_CS_ENTER(name, mutex)      /* NOOP */
+//#define MPIDU_THREAD_CS_EXIT(name, mutex)       /* NOOP */
+//#define MPIDU_THREAD_CS_YIELD(name, mutex)      /* NOOP */
+//#define MPIDU_THREAD_ASSERT_IN_CS(name, mutex)  /* NOOP */
+#define MPIDU_THREAD_CS_ENTER(name, ...)      /* NOOP */
+#define MPIDU_THREAD_CS_EXIT(name, ...)       /* NOOP */
+#define MPIDU_THREAD_CS_YIELD(name, ...)      /* NOOP */
+#define MPIDU_THREAD_ASSERT_IN_CS(name, ...)  /* NOOP */
 
 #endif
 
@@ -250,15 +258,23 @@ M*/
 
 /* VCI is only enabled with MPICH_THREAD_GRANULARITY__VCI */
 #if MPICH_THREAD_GRANULARITY == MPICH_THREAD_GRANULARITY__VCI
-#define MPIDUI_THREAD_CS_ENTER_VCI(mutex) MPIDUI_THREAD_CS_ENTER(mutex)
-#define MPIDUI_THREAD_CS_EXIT_VCI(mutex) MPIDUI_THREAD_CS_EXIT(mutex)
-#define MPIDUI_THREAD_CS_YIELD_VCI(mutex) MPIDUI_THREAD_CS_YIELD(mutex)
-#define MPIDUI_THREAD_ASSERT_IN_CS_VCI(mutex) MPIDUI_THREAD_ASSERT_IN_CS(mutex)
+//#define MPIDUI_THREAD_CS_ENTER_VCI(mutex) MPIDUI_THREAD_CS_ENTER(mutex)
+//#define MPIDUI_THREAD_CS_EXIT_VCI(mutex) MPIDUI_THREAD_CS_EXIT(mutex)
+//#define MPIDUI_THREAD_CS_YIELD_VCI(mutex) MPIDUI_THREAD_CS_YIELD(mutex)
+//#define MPIDUI_THREAD_ASSERT_IN_CS_VCI(mutex) MPIDUI_THREAD_ASSERT_IN_CS(mutex)
+#define MPIDUI_THREAD_CS_ENTER_VCI(mutex, mutex_id) MPIDUI_THREAD_CS_ENTER(mutex)
+#define MPIDUI_THREAD_CS_EXIT_VCI(mutex, mutex_id) MPIDUI_THREAD_CS_EXIT(mutex)
+#define MPIDUI_THREAD_CS_YIELD_VCI(mutex, mutex_id) MPIDUI_THREAD_CS_YIELD(mutex)
+#define MPIDUI_THREAD_ASSERT_IN_CS_VCI(mutex, mutex_id) MPIDUI_THREAD_ASSERT_IN_CS(mutex)
 #else
-#define MPIDUI_THREAD_CS_ENTER_VCI(mutex)       /* NOOP */
-#define MPIDUI_THREAD_CS_EXIT_VCI(mutex)        /* NOOP */
-#define MPIDUI_THREAD_CS_YIELD_VCI(mutex)       /* NOOP */
-#define MPIDUI_THREAD_ASSERT_IN_CS_VCI(mutex)   /* NOOP */
+//#define MPIDUI_THREAD_CS_ENTER_VCI(mutex)       /* NOOP */
+//#define MPIDUI_THREAD_CS_EXIT_VCI(mutex)        /* NOOP */
+//#define MPIDUI_THREAD_CS_YIELD_VCI(mutex)       /* NOOP */
+//#define MPIDUI_THREAD_ASSERT_IN_CS_VCI(mutex)   /* NOOP */
+#define MPIDUI_THREAD_CS_ENTER_VCI(mutex, mutex_id)       /* NOOP */
+#define MPIDUI_THREAD_CS_EXIT_VCI(mutex, mutex_id)        /* NOOP */
+#define MPIDUI_THREAD_CS_YIELD_VCI(mutex, mutex_id)       /* NOOP */
+#define MPIDUI_THREAD_ASSERT_IN_CS_VCI(mutex, mutex_id)   /* NOOP */
 #endif
 
 #endif /* MPICH_IS_THREADED */
