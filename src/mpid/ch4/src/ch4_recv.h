@@ -24,7 +24,8 @@ MPL_STATIC_INLINE_PREFIX int anysource_irecv(void *buf, MPI_Aint count, MPI_Data
 #if MPICH_THREAD_GRANULARITY == MPICH_THREAD_GRANULARITY__VCI
     int vci;
     MPIDI_POSIX_RECV_VSI(vci);
-    MPID_THREAD_CS_ENTER(VCI, MPIDI_VCI(vci).lock);
+        //MPID_THREAD_CS_ENTER(VCI, MPIDI_VCI(vci).lock);
+    MPID_THREAD_CS_ENTER(VCI, MPIDI_VCI(vci).lock, vci);
 
     MPIDI_CH4_REQUEST_CREATE(*request, MPIR_REQUEST_KIND__RECV, vci, 1);
     MPIR_Assert(*request);
@@ -54,7 +55,8 @@ MPL_STATIC_INLINE_PREFIX int anysource_irecv(void *buf, MPI_Aint count, MPI_Data
     }
   fn_exit:
 #if MPICH_THREAD_GRANULARITY == MPICH_THREAD_GRANULARITY__VCI
-    MPID_THREAD_CS_EXIT(VCI, MPIDI_VCI(vci).lock);
+        //MPID_THREAD_CS_EXIT(VCI, MPIDI_VCI(vci).lock);
+    MPID_THREAD_CS_EXIT(VCI, MPIDI_VCI(vci).lock, vci);
 #endif
     return mpi_errno;
   fn_fail:
@@ -167,7 +169,8 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_cancel_recv_safe(MPIR_Request * rreq)
      */
     MPID_THREAD_CS_ENTER_REC_VCI(MPIDI_VCI(vci).lock);
     mpi_errno = MPIDI_cancel_recv_unsafe(rreq);
-    MPID_THREAD_CS_EXIT(VCI, MPIDI_VCI(vci).lock);
+        //MPID_THREAD_CS_EXIT(VCI, MPIDI_VCI(vci).lock);
+    MPID_THREAD_CS_EXIT(VCI, MPIDI_VCI(vci).lock, vci);
     MPIR_ERR_CHECK(mpi_errno);
 
   fn_exit:

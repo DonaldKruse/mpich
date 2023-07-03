@@ -115,7 +115,8 @@ int MPIR_Bsend_attach(void *buffer, MPI_Aint buffer_size)
     }
 #endif /* HAVE_ERROR_CHECKING */
 
-    MPID_THREAD_CS_ENTER(VCI, MPIR_THREAD_VCI_BSEND_MUTEX);
+        //MPID_THREAD_CS_ENTER(VCI, MPIR_THREAD_VCI_BSEND_MUTEX);
+    MPID_THREAD_CS_ENTER(VCI, MPIR_THREAD_VCI_BSEND_MUTEX, MPIR_THREAD_VCI_BSEND_MUTEX_ID);
     if (!initialized) {
         initialized = 1;
         MPIR_Add_finalize(MPIR_Bsend_finalize, (void *) 0, 10);
@@ -149,7 +150,8 @@ int MPIR_Bsend_attach(void *buffer, MPI_Aint buffer_size)
     p->next = p->prev = NULL;
     p->msg.msgbuf = (char *) p + BSENDDATA_HEADER_TRUE_SIZE;
 
-    MPID_THREAD_CS_EXIT(VCI, MPIR_THREAD_VCI_BSEND_MUTEX);
+        //MPID_THREAD_CS_EXIT(VCI, MPIR_THREAD_VCI_BSEND_MUTEX);
+    MPID_THREAD_CS_EXIT(VCI, MPIR_THREAD_VCI_BSEND_MUTEX, MPIR_THREAD_VCI_BSEND_MUTEX_ID);
     return MPI_SUCCESS;
 }
 
@@ -163,7 +165,8 @@ int MPIR_Bsend_detach(void *bufferp, MPI_Aint * size)
 {
     int mpi_errno = MPI_SUCCESS;
 
-    MPID_THREAD_CS_ENTER(VCI, MPIR_THREAD_VCI_BSEND_MUTEX);
+        //MPID_THREAD_CS_ENTER(VCI, MPIR_THREAD_VCI_BSEND_MUTEX);
+    MPID_THREAD_CS_ENTER(VCI, MPIR_THREAD_VCI_BSEND_MUTEX, MPIR_THREAD_VCI_BSEND_MUTEX_ID);
     if (BsendBuffer.pending) {
         /* FIXME: Process pending bsend requests in detach */
         mpi_errno = MPIR_Err_create_code(MPI_SUCCESS, MPIR_ERR_RECOVERABLE,
@@ -196,7 +199,8 @@ int MPIR_Bsend_detach(void *bufferp, MPI_Aint * size)
     BsendBuffer.pending = 0;
 
   fn_exit:
-    MPID_THREAD_CS_EXIT(VCI, MPIR_THREAD_VCI_BSEND_MUTEX);
+        //MPID_THREAD_CS_EXIT(VCI, MPIR_THREAD_VCI_BSEND_MUTEX);
+    MPID_THREAD_CS_EXIT(VCI, MPIR_THREAD_VCI_BSEND_MUTEX, MPIR_THREAD_VCI_BSEND_MUTEX_ID);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -214,7 +218,8 @@ int MPIR_Bsend_isend(const void *buf, int count, MPI_Datatype dtype,
     MPI_Aint packsize;
     int pass;
 
-    MPID_THREAD_CS_ENTER(VCI, MPIR_THREAD_VCI_BSEND_MUTEX);
+        //MPID_THREAD_CS_ENTER(VCI, MPIR_THREAD_VCI_BSEND_MUTEX);
+    MPID_THREAD_CS_ENTER(VCI, MPIR_THREAD_VCI_BSEND_MUTEX, MPIR_THREAD_VCI_BSEND_MUTEX_ID);
     /*
      * We may want to decide here whether we need to pack at all
      * or if we can just use (a MPIR_Memcpy) of the buffer.
@@ -315,7 +320,8 @@ int MPIR_Bsend_isend(const void *buf, int count, MPI_Datatype dtype,
     }
 
   fn_exit:
-    MPID_THREAD_CS_EXIT(VCI, MPIR_THREAD_VCI_BSEND_MUTEX);
+        //MPID_THREAD_CS_EXIT(VCI, MPIR_THREAD_VCI_BSEND_MUTEX);
+    MPID_THREAD_CS_EXIT(VCI, MPIR_THREAD_VCI_BSEND_MUTEX, MPIR_THREAD_VCI_BSEND_MUTEX_ID);
     return mpi_errno;
   fn_fail:
     goto fn_exit;
@@ -329,7 +335,8 @@ int MPIR_Bsend_isend(const void *buf, int count, MPI_Datatype dtype,
 int MPIR_Bsend_free_req_seg(MPIR_Request * req)
 {
     int mpi_errno = MPI_ERR_INTERN;
-    MPID_THREAD_CS_ENTER(VCI, MPIR_THREAD_VCI_BSEND_MUTEX);
+        //MPID_THREAD_CS_ENTER(VCI, MPIR_THREAD_VCI_BSEND_MUTEX);
+    MPID_THREAD_CS_ENTER(VCI, MPIR_THREAD_VCI_BSEND_MUTEX, MPIR_THREAD_VCI_BSEND_MUTEX_ID);
 
     MPII_Bsend_data_t *active = BsendBuffer.active;
 
@@ -346,7 +353,8 @@ int MPIR_Bsend_free_req_seg(MPIR_Request * req)
         MPL_DBG_MSG_P(MPIR_DBG_BSEND, TYPICAL, "Next active is %p", active);
     }
 
-    MPID_THREAD_CS_EXIT(VCI, MPIR_THREAD_VCI_BSEND_MUTEX);
+        //MPID_THREAD_CS_EXIT(VCI, MPIR_THREAD_VCI_BSEND_MUTEX);
+    MPID_THREAD_CS_EXIT(VCI, MPIR_THREAD_VCI_BSEND_MUTEX, MPIR_THREAD_VCI_BSEND_MUTEX_ID);
     return mpi_errno;
 }
 
