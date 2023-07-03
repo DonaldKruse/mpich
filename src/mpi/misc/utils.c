@@ -198,6 +198,32 @@ int MPIR_Localcopy(const void *sendbuf, MPI_Aint sendcount, MPI_Datatype sendtyp
     goto fn_exit;
 }
 
+
+#if defined(VCIEXP_LOCK_PTHREADS) || defined(VCIEXP_LOCK_ARGOBOTS)
+
+MPIU_exp_data_t g_MPIU_exp_data = {
+    "", /* dummy1 */
+    0,  /* debug_enabled */
+    -1, /* print_rank */
+    0,  /* print_enabled */
+#if defined(VCIEXP_LOCK_PTHREADS)
+    0,  /* no_lock */
+    #endif
+    ""  /* dummy2 */
+};
+
+__thread MPIU_exp_data_tls_t l_MPIU_exp_data = {
+    "", /* dummy1 */
+    0,  /* vci_mask */
+#if defined(VCIEXP_LOCK_PTHREADS)
+    -1, /* local_tid */
+    #endif
+    ""  /* dummy2 */
+};
+
+#endif /* defined(VCIEXP_LOCK_PTHREADS) || defined(VCIEXP_LOCK_ARGOBOTS) */
+
+
 int MPIR_Ilocalcopy(const void *sendbuf, MPI_Aint sendcount, MPI_Datatype sendtype,
                     void *recvbuf, MPI_Aint recvcount, MPI_Datatype recvtype,
                     MPIR_Typerep_req * typerep_req)

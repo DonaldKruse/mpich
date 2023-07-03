@@ -104,6 +104,35 @@ extern MPID_Thread_mutex_t MPIR_THREAD_VCI_BSEND_MUTEX;
 #define MPIR_THREAD_VCI_PMI_MUTEX_ID    (-3998)
 #define MPIR_THREAD_VCI_BSEND_MUTEX_ID  (-3997)
 
+
+#if defined(VCIEXP_LOCK_PTHREADS) || defined(VCIEXP_LOCK_ARGOBOTS)
+
+typedef struct {
+    char dummy1[64];
+    int debug_enabled;
+    int print_rank;
+    int print_enabled; /* 0: disabled, 1:lightly, 2: verbose, 3: very verbose */
+#if defined(VCIEXP_LOCK_PTHREADS)
+    int no_lock;
+    #endif
+    char dummy2[64];
+} MPIU_exp_data_t;
+extern MPIU_exp_data_t g_MPIU_exp_data;
+
+typedef struct {
+    char dummy1[64];
+    int vci_mask;
+#if defined(VCIEXP_LOCK_PTHREADS)
+    int local_tid;
+    #endif
+    char dummy2[64];
+} MPIU_exp_data_tls_t;
+extern __thread MPIU_exp_data_tls_t l_MPIU_exp_data;
+
+#endif /* defined(VCIEXP_LOCK_PTHREADS) || defined(VCIEXP_LOCK_ARGOBOTS) */
+
+
+
 #endif /* MPICH_THREAD_GRANULARITY */
 #endif /* MPICH_IS_THREADED */
 
