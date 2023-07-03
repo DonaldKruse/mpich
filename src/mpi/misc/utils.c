@@ -221,7 +221,43 @@ __thread MPIU_exp_data_tls_t l_MPIU_exp_data = {
     ""  /* dummy2 */
 };
 
-#endif /* defined(VCIEXP_LOCK_PTHREADS) || defined(VCIEXP_LOCK_ARGOBOTS) */
+int MPIX_Set_exp_info(int info_type, void *val1, int val2)
+{
+    if (info_type == MPIX_INFO_TYPE_PRINT_RANK) {
+        g_MPIU_exp_data.print_rank = val2;
+    } else if (info_type == MPIX_INFO_TYPE_LOCAL_TID) {
+#if defined(VCIEXP_LOCK_PTHREADS)
+        l_MPIU_exp_data.local_tid = val2;
+        #else
+        if (g_MPIU_exp_data.print_enabled) {
+            printf("MPIX_INFO_TYPE_LOCAL_TID: %d is ignored.\n", val2);
+        }
+        #endif
+    } else if (info_type == MPIX_INFO_TYPE_DEBUG_ENABLED) {
+        g_MPIU_exp_data.debug_enabled = val2;
+    } else if (info_type == MPIX_INFO_TYPE_PRINT_ENABLED) {
+        g_MPIU_exp_data.print_enabled = val2;
+    } else if (info_type == MPIX_INFO_TYPE_NOLOCK) {
+#if defined(VCIEXP_LOCK_PTHREADS)
+        g_MPIU_exp_data.no_lock = val2;
+        #else
+        if (g_MPIU_exp_data.print_enabled) {
+            printf("MPIX_INFO_TYPE_NOLOCK: %d is ignored.\n", val2);
+        }
+        #endif
+    } else if (info_type == MPIX_INFO_TYPE_VCIMASK) {
+        l_MPIU_exp_data.vci_mask = val2;
+    }
+}
+
+#else /* !(defined(VCIEXP_LOCK_PTHREADS) || defined(VCIEXP_LOCK_ARGOBOTS)) */
+
+int MPIX_Set_exp_info(int info_type, void *val1, int val2)
+{
+        /* Ignored. */
+}
+
+#endif /* !(defined(VCIEXP_LOCK_PTHREADS) || defined(VCIEXP_LOCK_ARGOBOTS)) */
 
 
 int MPIR_Ilocalcopy(const void *sendbuf, MPI_Aint sendcount, MPI_Datatype sendtype,

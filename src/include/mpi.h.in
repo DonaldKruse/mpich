@@ -995,6 +995,16 @@ typedef struct MPIX_Iov {
 #ifndef MPICH_SUPPRESS_PROTOTYPES
 /* We require that the C compiler support prototypes */
 #include <mpi_proto.h>
+
+/* Set experimental parameters. */
+#define MPIX_INFO_TYPE_PRINT_RANK      0
+#define MPIX_INFO_TYPE_LOCAL_TID       1
+#define MPIX_INFO_TYPE_DEBUG_ENABLED   2
+#define MPIX_INFO_TYPE_PRINT_ENABLED   3
+#define MPIX_INFO_TYPE_NOLOCK          4
+#define MPIX_INFO_TYPE_VCIMASK         5
+int MPIX_Set_exp_info(int info_type, void *val1, int val2) MPICH_API_PUBLIC;
+    
 #endif /* MPICH_SUPPRESS_PROTOTYPES */
 
 @HAVE_ROMIO@
