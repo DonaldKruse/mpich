@@ -12,8 +12,17 @@ MPL_STATIC_INLINE_PREFIX void MPIDI_set_progress_vci(MPIR_Request * req,
                                                      MPID_Progress_state * state)
 {
     state->flag = MPIDI_PROGRESS_ALL;   /* TODO: check request is_local/anysource */
+    state->progress_made = 0;
 
     int vci = MPIDI_Request_get_vci(req);
+#ifndef VCIEXP_NO_LOCK_SET_PROGRESS_VCI
+    MPID_THREAD_CS_ENTER(VCI, MPIDI_VCI(vci).lock, vci);
+#endif
+    state->progress_counts[0] = MPIDI_global.progress_counts[vci];
+#ifndef VCIEXP_NO_LOCK_SET_PROGRESS_VCI
+    MPID_THREAD_CS_EXIT(VCI, MPIDI_VCI(vci).lock, vci);
+
+#endif
 
     state->vci_count = 1;
     state->vci[0] = vci;
