@@ -195,8 +195,10 @@ bool MPIDUI_Thread_cs_update_history_and_decide(MPIDUI_Thread_abt_tls_t *p_tls, 
 
                                                 
 static inline
-void MPIDUI_Thread_cs_enter_vci_impl(MPIDU_Thread_mutex_t *p_mutex, int mutex_id, int print_level,
-                                     bool recursive, const char *mutex_str, const char *function,
+//void MPIDUI_Thread_cs_enter_vci_impl(MPIDU_Thread_mutex_t *p_mutex, int mutex_id, int print_level,
+//                                     bool recursive, const char *mutex_str, const char *function,
+void MPIDUI_Thread_cs_enter_vci_impl(MPIDU_Thread_mutex_t *p_mutex, int mutex_id, bool recursive,
+                                     int print_level, const char *mutex_str, const char *function,
                                      const char *file, int line)
 {
     if (mutex_id <= 0 || VCIEXP_LOCK_PTHREADS_COND_OR_FALSE(!g_MPIU_exp_data.no_lock)) {
