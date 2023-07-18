@@ -116,8 +116,12 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_progress_test(MPID_Progress_state * state)
     MPIDUI_THREAD_CS_EXIT_VCI_NOPRINT(MPIDI_VCI(0).lock, 0);
 #else
     /* multiple vci */
+#ifdef VCIEXP_PER_STATE_PROGRESS_COUNTER
+    if (((++state->global_progress_counter) & MPIDI_CH4_PROG_POLL_MASK) == 0) {
+#else
     bool is_explicit_vci = (state->vci_count == 1 && MPIDI_VCI_IS_EXPLICIT(state->vci[0]));
     if (!is_explicit_vci && MPIDI_do_global_progress()) {
+#endif
         for (int vci = 0; vci < MPIDI_global.n_vcis; vci++) {
             int skip = 0;
             MPIDUI_THREAD_CS_ENTER_OR_SKIP_VCI_NOPRINT(MPIDI_VCI(vci).lock, vci, &skip);
@@ -178,8 +182,10 @@ MPL_STATIC_INLINE_PREFIX void MPIDI_progress_state_init(MPID_Progress_state * st
         state->vci[i] = i;
     }
     state->vci_count = MPIDI_global.n_vcis;
-    #endif
-
+#endif
+#ifdef VCIEXP_PER_STATE_PROGRESS_COUNTER
+    state->global_progress_counter = 0;
+#endif
 
                                          
     /* For lockless, no VCI lock is needed during NM progress */
