@@ -18,9 +18,10 @@ MPID_Thread_mutex_t MPIR_THREAD_VCI_HANDLE_POOL_MUTEXES[MPIR_REQUEST_NUM_POOLS];
 
 /* progress */
 
-/* NOTE: MPL_TLS may be empty if it is unavailable. Since we just need ensure global
- * progress happen, so some race condition or even corruption can be tolerated.  */
-MPL_TLS int global_vci_poll_count = 0;
+/* NOTE: MPL_TLS may be empty if it is unavailable. Since we just need to ensure that global
+ * progress happens, so some race condition or even corruption can be tolerated.  */
+//MPL_TLS int global_vci_poll_count = 0;
+__thread int global_vci_poll_count = 0;
 
 /* ** HACK **
  * Hack to workaround an Intel compiler bug on macOS. Touching

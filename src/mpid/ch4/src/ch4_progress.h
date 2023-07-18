@@ -31,7 +31,8 @@ cvars:
  */
 #define MPIDI_CH4_PROG_POLL_MASK 0xff
 
-extern MPL_TLS int global_vci_poll_count;
+//extern MPL_TLS int global_vci_poll_count;
+extern __thread int global_vci_poll_count;
 
 MPL_STATIC_INLINE_PREFIX int MPIDI_do_global_progress(void)
 {
