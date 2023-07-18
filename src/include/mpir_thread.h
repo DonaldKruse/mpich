@@ -121,7 +121,8 @@ extern MPIU_exp_data_t g_MPIU_exp_data;
 
 typedef struct {
     char dummy1[64];
-    int vci_mask;
+        //int vci_mask;
+    uint64_t vci_mask;
 #if defined(VCIEXP_LOCK_PTHREADS)
     int local_tid;
     #endif
@@ -156,6 +157,43 @@ void MPIDUI_Thread_cs_vci_print(MPIDU_Thread_mutex_t *p_mutex, int mutex_id, con
                                 int line);
 
 
+#if defined(VCIEXP_LOCK_ARGOBOTS)
+/* Argobots-only data structures and functions. */
+typedef struct MPIDUI_Thread_abt_tls_t {
+    uint64_t vci_history;
+    ABT_pool original_pool;
+} MPIDUI_Thread_abt_tls_t;
+ABT_pool MPIDUI_Thread_cs_get_target_pool(int mutex_id);
+
+static inline
+void MPIDUI_Thread_cs_update_history(MPIDUI_Thread_abt_tls_t *p_tls, int mutex_id)
+{
+        /* Update the history. */
+    p_tls->vci_history = (((uint64_t)(mutex_id)) | (p_tls->vci_history << (uint64_t)8));
+}
+
+/* Return true if this ULT should migrate. */
+static inline
+bool MPIDUI_Thread_cs_update_history_and_decide(MPIDUI_Thread_abt_tls_t *p_tls, int mutex_id)
+{
+    uint64_t vci_history = p_tls->vci_history;
+        /* Update the history. */
+    p_tls->vci_history = (((uint64_t)(mutex_id)) | (vci_history << (uint64_t)8));
+#define MPIDUI_THREAD_CS_CHECK_EQ_TMP(i)                                \
+    (mutex_id == ((vci_history >> (uint64_t)(i * 8)) & (uint64_t)0xFF) ? 1 : 0) \
+        int count = MPIDUI_THREAD_CS_CHECK_EQ_TMP(0) + MPIDUI_THREAD_CS_CHECK_EQ_TMP(1) \
+        + MPIDUI_THREAD_CS_CHECK_EQ_TMP(2) + MPIDUI_THREAD_CS_CHECK_EQ_TMP(3) \
+        + MPIDUI_THREAD_CS_CHECK_EQ_TMP(4) + MPIDUI_THREAD_CS_CHECK_EQ_TMP(5) \
+        + MPIDUI_THREAD_CS_CHECK_EQ_TMP(6) + MPIDUI_THREAD_CS_CHECK_EQ_TMP(7);
+#undef MPIDUI_THREAD_CS_CHECK_EQ_TMP                                
+        /* Currently, if this thread is offloaded to the same thread N out of 8 times (including this), migration happens. */
+    const int N = 5;
+    return count >= N;
+}
+#endif
+
+
+                                                
 static inline
 void MPIDUI_Thread_cs_enter_vci_impl(MPIDU_Thread_mutex_t *p_mutex, int mutex_id, int print_level,
                                      bool recursive, const char *mutex_str, const char *function,
@@ -173,6 +211,61 @@ void MPIDUI_Thread_cs_enter_vci_impl(MPIDU_Thread_mutex_t *p_mutex, int mutex_id
             MPIDUI_THREAD_CS_ENTER((*p_mutex));
         }
     } else {
+#if defined(VCIEXP_LOCK_ARGOBOTS)
+            /* Schedule this ULT on a certain execution stream. */
+        MPL_thread_id_t owner_id;
+        MPIDUI_Thread_abt_tls_t *p_tls =
+            (MPIDUI_Thread_abt_tls_t *)MPL_thread_get_tls_ptr_and_self_fast(&owner_id);
+        while (1) {
+            if (!((((uint64_t)1) << (uint64_t)(mutex_id - 1)) & l_MPIU_exp_data.vci_mask)) {
+                    /* Check if we should "migrate" this thread, not "offload". */
+                if (MPIDUI_Thread_cs_update_history_and_decide(p_tls, mutex_id)) {
+                        /* Migration should happen. */
+                    if (MPIDUI_THREAD_CHECK_ERROR && unlikely(g_MPIU_exp_data.debug_enabled)) {
+                        if (g_MPIU_exp_data.print_enabled >= print_level)
+                            MPIDUI_Thread_cs_vci_print(p_mutex, mutex_id, "resched-acquire-nomig",
+                                                       mutex_str, function, file, line);
+                    }
+                } else {
+                        /* Migration should not happen. */
+                    if (MPIDUI_THREAD_CHECK_ERROR && unlikely(g_MPIU_exp_data.debug_enabled)) {
+                        if (g_MPIU_exp_data.print_enabled >= print_level)
+                            MPIDUI_Thread_cs_vci_print(p_mutex, mutex_id, "resched-acquire-mig",
+                                                       mutex_str, function, file, line);
+                    }
+                    p_tls->original_pool = ABTX_FAST_SELF_GET_ASSOCIATED_POOL();
+                }
+                ABT_pool target_pool = MPIDUI_Thread_cs_get_target_pool(mutex_id);
+                int ret = ABTX_FAST_SET_ASSOCIATED_POOL_AND_YIELD(target_pool);
+                MPIR_Assert(ret == ABT_SUCCESS);
+            } else {
+                    /* This VCI operation can be done on this execution stream. */
+                MPIDUI_Thread_cs_update_history(p_tls, mutex_id);
+            }
+            if (likely(p_mutex->count == 0)) {
+                    /* This thread becomes an owner. */
+                p_mutex->owner = owner_id;
+                p_mutex->count = 1;
+                break;
+            } else if (recursive) {
+                    /* If this thread is the owner, it's fine. */
+                if (owner_id == p_mutex->owner) {
+                    p_mutex->count++;
+                    break;
+                }
+            }
+                /* It seems that another ULT is taking this lock. */
+            if (MPIDUI_THREAD_CHECK_ERROR && unlikely(g_MPIU_exp_data.debug_enabled)) {
+                if (g_MPIU_exp_data.print_enabled >= print_level)
+                    MPIDUI_Thread_cs_vci_print(p_mutex, mutex_id, "retry-acquire", mutex_str,
+                                               function, file, line);
+            }
+                /* Try again after yield. */
+            int ret = ABT_self_yield();
+            MPIR_Assert(ret == ABT_SUCCESS);
+        }
+            /* fallthrough */
+#endif /* defined(VCIEXP_LOCK_ARGOBOTS) */
         if (MPIDUI_THREAD_CHECK_ERROR && unlikely(g_MPIU_exp_data.debug_enabled)) {
             if (g_MPIU_exp_data.print_enabled >= print_level)
                 MPIDUI_Thread_cs_vci_print(p_mutex, mutex_id, "empty-acquire", mutex_str, function,
@@ -197,7 +290,29 @@ void MPIDUI_Thread_cs_enter_or_skip_vci_impl(MPIDU_Thread_mutex_t *p_mutex, int 
         }
         MPIDUI_THREAD_CS_ENTER((*p_mutex));
         *p_skip = 0;
-    } else if (VCIEXP_LOCK_PTHREADS_COND_OR_FALSE((1 << mutex_id) & l_MPIU_exp_data.vci_mask)) {
+//    } else if (VCIEXP_LOCK_PTHREADS_COND_OR_FALSE((1 << mutex_id) & l_MPIU_exp_data.vci_mask)) {
+    } else if ((1 << mutex_id) & l_MPIU_exp_data.vci_mask) {
+        
+#if defined(VCIEXP_LOCK_ARGOBOTS)
+            /* Since multiple ULTs can be associated with a single execution stream, we need to check
+             *          * the owner. */
+        if (unlikely(p_mutex->count != 0)) {
+                /* Someone has taken this lock (NOTE: this function does not take a recursive lock). */
+            if (MPIDUI_THREAD_CHECK_ERROR && unlikely(g_MPIU_exp_data.debug_enabled)) {
+                if (g_MPIU_exp_data.print_enabled >= print_level)
+                    MPIDUI_Thread_cs_vci_print(p_mutex, mutex_id, "skip-empty-acquire", mutex_str,
+                                               function, file, line);
+            }
+            *p_skip = 1;
+            return;
+        } else {
+                /* To take a lock, set owner and count. */
+            p_mutex->count = 1;
+            p_mutex->owner = MPL_thread_get_self_fast();
+        }
+            /* fallthrough */
+#endif
+        
             /* This VCI should be checked without lock. */
         if (MPIDUI_THREAD_CHECK_ERROR && unlikely(g_MPIU_exp_data.debug_enabled)) {
             if (g_MPIU_exp_data.print_enabled >= print_level)
@@ -238,6 +353,22 @@ void MPIDUI_Thread_cs_exit_vci_impl(MPIDU_Thread_mutex_t *p_mutex, int mutex_id,
                                            file, line);
             MPIDUI_Thread_cs_vci_check(p_mutex, mutex_id, mutex_str, function, file, line);
         }
+#if defined(VCIEXP_LOCK_ARGOBOTS)
+        if (likely(p_mutex->count == 1)) {
+            p_mutex->count = 0;
+            MPIDUI_Thread_abt_tls_t *p_tls =
+                (MPIDUI_Thread_abt_tls_t *)ABTX_FAST_SELF_GET_TLS_PTR();
+            ABT_pool original_pool = p_tls->original_pool;
+            if (original_pool) {
+                    /* This ULT was offloaded. Go back to the original pool. */
+                p_tls->original_pool = NULL;
+                int ret = ABTX_FAST_SET_ASSOCIATED_POOL_AND_YIELD(original_pool);
+                MPIR_Assert(ret == ABT_SUCCESS);
+            }
+        } else {
+            p_mutex->count -= 1;
+        }
+#endif
     }
 }
 
@@ -261,6 +392,38 @@ void MPIDUI_Thread_cs_yield_vci_impl(MPIDU_Thread_mutex_t *p_mutex, int mutex_id
                                            file, line);
             MPIDUI_Thread_cs_vci_check(p_mutex, mutex_id, mutex_str, function, file, line);
         }
+#if defined(VCIEXP_LOCK_ARGOBOTS)
+        if (p_mutex->count == 1) {
+            MPL_thread_id_t self = p_mutex->owner;
+            p_mutex->owner = 0;
+            p_mutex->count = 0;
+                /* This yield is not very desirable since there's no guarantee of progress while it is
+                 *              * yielding.  This routine should not be called very often. */
+            ABT_pool target_pool = MPIDUI_Thread_cs_get_target_pool(mutex_id);
+            while (1) {
+                int ret = ABTX_FAST_SET_ASSOCIATED_POOL_AND_YIELD(target_pool);
+                MPIR_Assert(ret == ABT_SUCCESS);
+                if (p_mutex->owner == 0) {
+                    p_mutex->owner = self;
+                    p_mutex->count = 1;
+                    break;
+                } else {
+                    if (MPIDUI_THREAD_CHECK_ERROR && unlikely(g_MPIU_exp_data.debug_enabled)) {
+                        if (g_MPIU_exp_data.print_enabled >= print_level)
+                            MPIDUI_Thread_cs_vci_print(p_mutex, mutex_id, "retry-yacquire",
+                                                       mutex_str, function, file, line);
+                    }
+                }
+            }
+        } else {
+                /* Yielding recursive lock does not make sense. */
+            MPIR_Assert(0);
+        }
+        if (MPIDUI_THREAD_CHECK_ERROR && unlikely(g_MPIU_exp_data.debug_enabled)) {
+                /* Check the VCI association again. */
+            MPIDUI_Thread_cs_vci_check(p_mutex, mutex_id, mutex_str, function, file, line);
+        }
+#endif
     }
 }
 

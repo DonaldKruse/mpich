@@ -285,6 +285,57 @@ void MPIDUI_Thread_cs_vci_print(MPIDU_Thread_mutex_t *p_mutex, int mutex_id, con
     fflush(0);
 }
 
+#if defined(VCIEXP_LOCK_ARGOBOTS)
+#define MAX_XSTREAMS 256
+typedef struct {
+    char dummy1[64];
+    ABT_pool vci_pools[MPIDI_CH4_MAX_VCIS]; /* private pools. */
+    char dummy2[64];
+} abt_data_t;
+
+static abt_data_t g_abt_data;
+
+static void update_vci_mask(int vci_mask)
+{
+    int vci, ret;
+    ABT_pool mypool;
+    ABT_xstream xstream;
+
+    ret = ABT_self_get_xstream(&xstream);
+    MPIR_Assert(ret == ABT_SUCCESS);
+    {
+        ABT_pool tmp_pools[2];
+        ret = ABT_xstream_get_main_pools(xstream, 2, tmp_pools);
+        MPIR_Assert(ret == ABT_SUCCESS);
+            /* The second pool is what we want. */
+        mypool = tmp_pools[1];
+    }
+        /* Remove the previous setting. */
+    for (vci = 0; vci < MPIDI_CH4_MAX_VCIS; vci++) {
+        if (g_abt_data.vci_pools[vci] == mypool)
+            g_abt_data.vci_pools[vci] = NULL;
+    }
+        /* Update this setting. */
+    for (vci = 0; vci < MPIDI_CH4_MAX_VCIS; vci++) {
+        if ((1 << vci) & vci_mask) {
+                /* This vci is corresponding to this ES. */
+            g_abt_data.vci_pools[vci] = mypool;
+        }
+    }
+}
+
+ABT_pool MPIDUI_Thread_cs_get_target_pool(int mutex_id)
+{
+    ABT_pool pool = g_abt_data.vci_pools[mutex_id];
+    if (pool == NULL) {
+        printf("mutex_id = %d\n", mutex_id);
+        MPIR_Assert(pool != NULL);
+    }
+    return pool;
+}
+
+#endif
+
 
 
 int MPIX_Set_exp_info(int info_type, void *val1, int val2)
@@ -313,6 +364,9 @@ int MPIX_Set_exp_info(int info_type, void *val1, int val2)
 #endif
     } else if (info_type == MPIX_INFO_TYPE_VCIMASK) {
         l_MPIU_exp_data.vci_mask = val2;
+#if defined(VCIEXP_LOCK_ARGOBOTS)
+        update_vci_mask(val2);
+#endif
     }
 }
 
