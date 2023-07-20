@@ -470,6 +470,38 @@ int MPIR_allocate_enqueue_request(MPIR_Comm * comm_ptr, MPIR_Request ** req);
 #define MPIR_Request_add_ref(req_p_) \
     do { MPIR_Object_add_ref(req_p_); } while (0)
 
+
+
+
+
+
+
+
+#ifdef VCIEXP_FAST_UNSAFE_ADD_REF
+#define MPIR_Request_add_ref_unsafe(req_p_)                         \
+    do { MPIR_Object_add_refs_unsafe(req_p_, 1); } while (0)    
+
+#define MPIR_Request_add_refs_unsafe(req_p_, ref_count_)            \
+    do {                                                            \
+        if (ref_count_ != 0) {                                      \
+            MPIR_Object_add_refs_unsafe(req_p_, ref_count_);        \
+        }                                                           \
+    } while (0)                                                     
+#else /* VCIEXP_FAST_UNSAFE_ADD_REF */                              
+#define MPIR_Request_add_ref_unsafe(req_p_)                         \
+    do { MPIR_Request_add_ref(req_p_); } while (0)      
+#define MPIR_Request_add_refs_unsafe(req_p_, ref_count_)            \
+    do {                                                            \
+        int ref_i_id_;                                              \
+        for (ref_i_id_ = 0; ref_i_id_ < ref_count_; ref_i_id_++) {  \
+            MPIR_Request_add_ref(req_p_);                           \
+        }                                                           \
+    } while (0)                                     
+#endif /* VCIEXP_FAST_UNSAFE_ADD_REF */     
+                                                                        
+                                                                        
+                                                                        
+
 #define MPIR_Request_release_ref(req_p_, inuse_) \
     do { MPIR_Object_release_ref(req_p_, inuse_); } while (0)
 

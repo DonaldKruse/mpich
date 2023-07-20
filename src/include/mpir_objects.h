@@ -350,6 +350,17 @@ typedef int Handle_ref_count;
         HANDLE_CHECK_REFCOUNT(objptr_,(objptr_)->ref_count,"decr");     \
     } while (0)
 
+
+#define MPIR_Object_add_refs_always_unsafe(objptr_, ref_count_)         \
+    do {                                                                \
+        int ref_count_id_;                                              \
+        for (ref_count_id_ = 0; ref_count_id_ < ref_count_; ref_count_id_++) { \
+            MPIR_Object_add_ref_always(objptr_);                        \
+        }                                                               \
+    } while(0)                                                          
+
+
+
 #elif MPICH_THREAD_REFCOUNT == MPICH_REFCOUNT__LOCKFREE
 
 typedef MPL_atomic_int_t Handle_ref_count;
@@ -381,6 +392,8 @@ typedef MPL_atomic_int_t Handle_ref_count;
         HANDLE_LOG_REFCOUNT_CHANGE(objptr_, new_ref_, "incr");          \
         HANDLE_CHECK_REFCOUNT(objptr_,new_ref_,"incr");                 \
     } while (0)
+
+#ifndef VCIEXP_FAST_COUNT_ONE_REF_RELEASE
 #define MPIR_Object_release_ref_always(objptr_,inuse_ptr)                      \
     do {                                                                       \
         int new_ref_;                                                          \
@@ -403,6 +416,34 @@ typedef MPL_atomic_int_t Handle_ref_count;
         HANDLE_LOG_REFCOUNT_CHANGE(objptr_, new_ref_, "decr");                 \
         HANDLE_CHECK_REFCOUNT(objptr_,new_ref_,"decr");                        \
     } while (0)
+
+
+
+
+#else
+#define MPIR_Object_release_ref_always(objptr_,inuse_ptr)               \
+        do {                                                            \
+            if (MPL_atomic_acquire_load_int(&((objptr_)->ref_count)) == 1) { \
+                MPL_atomic_relaxed_store_int(&((objptr_)->ref_count), 0); \
+                *(inuse_ptr) = 0;                                       \
+            } else {                                                    \
+                int new_ref_ =                                          \
+                    MPL_atomic_fetch_sub_int(&((objptr_)->ref_count), 1) - 1; \
+                *(inuse_ptr) = new_ref_;                                \
+            }                                                           \
+        } while (0)                                                     
+#endif                                                      
+
+
+#define MPIR_Object_add_refs_always_unsafe(objptr_, ref_count_)         \
+        do {                                                            \
+            int cur_ref_count_ = MPL_atomic_relaxed_load_int(&((objptr_)->ref_count)); \
+            MPL_atomic_relaxed_store_int(&((objptr_)->ref_count), cur_ref_count_ + ref_count_); \
+        } while(0)                                                      
+
+
+
+
 #else /* MPICH_DEBUG_HANDLES */
 /* MPICH_THREAD_REFCOUNT == MPICH_REFCOUNT__LOCKFREE && !MPICH_DEBUG_HANDLES */
 #define MPIR_Object_add_ref_always(objptr_)     \
@@ -421,6 +462,37 @@ typedef MPL_atomic_int_t Handle_ref_count;
             *(inuse_ptr) = new_ref_;                                        \
         }                                                                   \
     } while (0)
+#else /* VCIEXP_FAST_COUNT_ONE_REF_RELEASE */
+#define MPIR_Object_release_ref_always(objptr_,inuse_ptr)               \
+        do {                                                            \
+            /* If it is 1, we will just free it.  Note that any concurrent \ 
+             * add_ref() to a handle with count=1 is illegal and we do not \
+             * consider.  fetch_sub can happen to be executed earlier than \
+             * fetch_add, which frees this object. */ 
+if (MPL_atomic_acquire_load_int(&((objptr_)->ref_count)) == 1) {        \
+    MPL_atomic_relaxed_store_int(&((objptr_)->ref_count), 0);           \
+    *(inuse_ptr) = 0;                                                   \
+} else {                                                                \
+    int new_ref_ =                                                      \
+        MPL_atomic_fetch_sub_int(&((objptr_)->ref_count), 1) - 1;       \
+    *(inuse_ptr) = new_ref_;                                            \
+}                                                                       \
+HANDLE_LOG_REFCOUNT_CHANGE(objptr_, new_ref_, "decr");                  \
+HANDLE_CHECK_REFCOUNT(objptr_,new_ref_,"decr");                         \
+} while (0)
+
+
+      
+#endif /* VCIEXP_FAST_COUNT_ONE_REF_RELEASE */
+
+#define MPIR_Object_add_refs_always_unsafe(objptr_, ref_count_)         \
+      do {                                                              \
+          int ref_count_id_;                                            \
+          for (ref_count_id_ = 0; ref_count_id_ < ref_count_; ref_count_id_++) { \
+              MPIR_Object_add_ref_always(objptr_);                      \
+          }                                                             \
+      } while(0)
+      
 #endif /* MPICH_DEBUG_HANDLES */
 #else
 #error invalid value for MPICH_THREAD_REFCOUNT
@@ -473,6 +545,17 @@ typedef MPL_atomic_int_t Handle_ref_count;
                 }                                                       \
     } while (0)
 
+
+#define MPIR_Object_add_refs_unsafe(objptr_, ref_count_)                \
+        do {                                                            \
+            int handle_kind_ = HANDLE_GET_KIND((objptr_)->handle);      \
+            if (unlikely(handle_kind_ != HANDLE_KIND_BUILTIN)) {        \
+                MPIR_Object_add_refs_always_unsafe((objptr_), ref_count_); \
+            }                                                           \
+        } while (0)                                                     
+      
+      
+
 #else /* !defined(MPICH_THREAD_SUPPRESS_PREDEFINED_REFCOUNTS) */
 
 /* the base case, where we just always manipulate the reference counts */
@@ -480,7 +563,10 @@ typedef MPL_atomic_int_t Handle_ref_count;
     MPIR_Object_add_ref_always((objptr_))
 #define MPIR_Object_release_ref(objptr_,inuse_ptr_)             \
     MPIR_Object_release_ref_always((objptr_),(inuse_ptr_))
+#define MPIR_Object_add_refs_unsafe(objptr_, ref_count_) \
+        MPIR_Object_add_refs_always_unsafe((objptr_), ref_count_)
 
+      
 #endif
 
 

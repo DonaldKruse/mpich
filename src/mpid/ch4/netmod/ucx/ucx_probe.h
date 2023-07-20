@@ -50,6 +50,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_NM_mpi_improbe(int source,
         MPIR_ERR_CHKANDSTMT((req) == NULL, mpi_errno, MPIX_ERR_NOREQ, goto fn_fail, "**nomemreq");
         req->comm = comm;
         MPIR_Comm_add_ref(comm);
+        MPIR_Request_add_ref_unsafe(req);
         MPIDI_UCX_REQ(req).message_handler = message_h;
 
         if (status != MPI_STATUS_IGNORE) {

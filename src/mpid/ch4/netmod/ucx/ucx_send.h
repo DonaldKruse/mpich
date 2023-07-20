@@ -88,6 +88,7 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_UCX_send(const void *buf,
         } else {
             MPIR_Request_add_ref(req);
         }
+        MPIR_Request_add_ref_unsafe(req);
         ucp_request->req = req;
         MPIDI_UCX_REQ(req).ucp_request = ucp_request;
     } else if (req != NULL) {

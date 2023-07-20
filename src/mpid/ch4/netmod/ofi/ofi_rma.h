@@ -306,8 +306,10 @@ MPL_STATIC_INLINE_PREFIX int MPIDI_OFI_do_put(const void *origin_addr,
     goto fn_exit;
   null_op_exit:
     mpi_errno = MPI_SUCCESS;
-    if (sigreq)
+    if (sigreq) {
         *sigreq = MPIR_Request_create_complete(MPIR_REQUEST_KIND__RMA);
+        MPIR_Request_add_ref_unsafe(*sigreq);
+    }
     goto fn_exit;
 }
 
